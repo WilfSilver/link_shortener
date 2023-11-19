@@ -29,7 +29,7 @@ use crate::database::{Db, Result};
 use crate::utils::random_colour;
 
 #[get("/")]
-pub async fn index() -> Redirect {
+pub fn index() -> Redirect {
     Redirect::to(uri!("/admin"))
 }
 

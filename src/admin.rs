@@ -33,7 +33,7 @@ pub use admin_uri as uri;
 use crate::api::API_LOCAL;
 
 #[get("/")]
-pub async fn index(_user: User) -> Template {
+pub fn index(_user: User) -> Template {
     Template::render(
         "shortener",
         context! { api: API_LOCAL, colour: random_colour(), name: "Home" },
@@ -41,17 +41,17 @@ pub async fn index(_user: User) -> Template {
 }
 
 #[get("/", rank = 2)]
-async fn no_auth_index() -> Redirect {
+fn no_auth_index() -> Redirect {
     Redirect::to(uri!(login_page))
 }
 
 #[get("/login")]
-async fn login(_user: User) -> Redirect {
+fn login(_user: User) -> Redirect {
     Redirect::to(uri!(index))
 }
 
 #[get("/login", rank = 2)]
-async fn login_page() -> Template {
+fn login_page() -> Template {
     Template::render(
         "login",
         context! {

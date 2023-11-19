@@ -8,7 +8,14 @@
               <textarea id="url" name="url" type="url" class="materialize-textarea validate" placeholder=" "></textarea>
               <label for="url">Ugly URL</label>
             </div>
-            <div class="input-field my-3">
+            <div class="switch">
+              <label>
+                Specify Name
+                <input id="include-name" type="checkbox" checked onclick="hide_name(!this.checked)">
+                <span class="lever"></span>
+              </label>
+            </div>
+            <div id="name-input" class="input-field my-3">
               <input id="name" name="name" placeholder=" ">
               <label for="name">Name</label>
             </div>
@@ -24,11 +31,11 @@
     <div class="modal-content">
       <h4>Here it is!</h4>
       <div class="row">
-        <div class="input-field offset-m2 s12 m6 my-4">
-          <input id="final_url" type="text" class="right-align" placeholder=" " readonly/>
-          <label for="final_url" class="right-align">Shortened URL</label>
+        <div class="input-field offset-m3 outlined s12 m5 my-4">
+          <input id="final_url" type="text" placeholder=" " readonly/>
+          <label for="final_url">Shortened URL</label>
         </div>
-        <a class="btn-flat s12 m1 pt-2 mt-5 tooltipped" onclick="copy_text_in('final_url')" data-position="top" data-tooltip="Click to copy URL!">
+        <a class="suffix btn-flat s12 m1 mt-5 tooltipped" onclick="copy_text_in('final_url')" data-position="top" data-tooltip="Click to copy URL!">
           <i class="large material-icons">content_copy</i>
         </a>
       </div>
@@ -61,6 +68,10 @@
       reset_form(form);
     }
 
+    function hide_name(value) {
+      document.getElementById('name-input').hidden = value;
+    }
+
     function validate(form, data) {
       if (data.url.length < 4 || data.url.substr(0, 4) !== 'http') {
         data.url = 'https://' + data.url;
@@ -70,9 +81,15 @@
         }
       }
 
+      const include_name = document.getElementById('include-name').checked;
+      if (!include_name) {
+        delete data.name;
+      }
+
       return data;
     }
 
+    hide_name(!document.getElementById('include-name').checked);
     init_form(document.querySelector('form'), form_callback, validate);
   </script>
 {{/layout}}
