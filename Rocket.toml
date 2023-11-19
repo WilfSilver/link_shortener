@@ -1,0 +1,8 @@
+[default]
+template_dir = "templates"
+hostname = "http://localhost:8000/"
+username = "admin"
+password = "$argon2i$v=19$m=16,t=2,p=1$cFY4SUw4Wld2aHVNOGNJeA$C87YMie9XUEKTL3FdIiR+w" # Password!
+
+[default.databases.diesel_postgres]
+url = "postgres://localhost"
