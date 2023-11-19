@@ -2,7 +2,9 @@ use rocket::fairing::AdHoc;
 use rocket::response::Debug;
 use rocket::serde::{Deserialize, Serialize};
 use rocket_db_pools::diesel::{self, prelude::*, PgPool};
-use rocket_db_pools::Database;
+use rocket_db_pools::{Connection, Database};
+
+use crate::schema;
 
 pub type Result<T, E = Debug<diesel::result::Error>> = std::result::Result<T, E>;
 
@@ -16,6 +18,26 @@ pub struct Db(PgPool);
 pub struct Url {
     pub name: String,
     pub url: String,
+}
+
+impl Url {
+    pub async fn exists(conn: &mut Connection<Db>, name: &str) -> bool {
+        let res: Result<Url, _> = schema::urls::table
+            .filter(schema::urls::name.eq(name))
+            .first(conn)
+            .await;
+
+        res.is_ok()
+    }
+
+    pub async fn from_url(conn: &mut Connection<Db>, url: &str) -> Option<Url> {
+        let res: Result<Url, _> = schema::urls::table
+            .filter(schema::urls::url.eq(url))
+            .first(conn)
+            .await;
+
+        res.ok()
+    }
 }
 
 pub fn stage() -> AdHoc {
