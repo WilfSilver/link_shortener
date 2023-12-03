@@ -1,5 +1,2 @@
 [default]
 template_dir = "templates"
-
-[default.databases.diesel_postgres]
-url = "postgres://localhost"

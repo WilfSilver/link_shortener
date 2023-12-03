@@ -13,22 +13,19 @@ links.
 ## Get Started
 
 ```sh
-export DATABASE_URL="<postgresql_url"
+export DATABASE_URL="<postgresql_url>"
 diesel migration run
 cargo run
 ```
 
 ## Configuration
 
-In the `Rocket.toml` file you need the following information
+We recommend that you set these parameters in the environmental variables for
+security, however they can also be set in the `Rocket.toml` file by following
+their documentation.
 
-```sh
-[default.databases.diesel_postgres]
-url = "<postgresql_url>"
-```
-
-And then you need to specify the following environmental variables (recommended
-to put them in the `.cargo/config.toml` file)
+If you want this to work with `cargo run`, you can use the `.cargo/config.toml`
+and put the variables under `[env]`, or you can have the following `.env` file:
 
 ```sh
 APP_CLIENT_ID="<client_id>"
@@ -36,5 +33,6 @@ APP_CLIENT_SECRET="<client_secret>"
 APP_CLIENT_URL="<oidc_server_url>"
 APP_HOSTNAME="<hostname>"
 
+APP_DATABASES="{diesel_postgres={url=\"<database_url>\",idle_timeout=120}}"
 APP_SECRET_KEY="<your_secret_key>"
 ```
