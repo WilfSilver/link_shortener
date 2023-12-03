@@ -8,6 +8,7 @@
               <textarea id="url" name="url" type="url" class="materialize-textarea validate" placeholder=" "></textarea>
               <label for="url">Ugly URL</label>
             </div>
+            {{#if allow_custom_name}}
             <div class="switch">
               <label>
                 Specify Name
@@ -15,10 +16,23 @@
                 <span class="lever"></span>
               </label>
             </div>
-            <div id="name-input" class="input-field my-3">
-              <input id="name" name="name" placeholder=" ">
-              <label for="name">Name</label>
+            <div id="name-input" class="row my-3">
+              <div class="input-field col s4">
+                <select id="prefix">
+                  <option value=""></option>
+                  {{#each prefixes}}
+                  <option value="{{this.prefix}}">{{this.prefix}}</option>
+                  {{/each}}
+                </select>
+                <label>Prefix</label>
+              </div>
+
+              <div class="input-field col s8">
+                <input name="name" placeholder=" " id="name">
+                <label for="name">Name</label>
+              </div>
             </div>
+            {{/if}}
             <div id="error" class="card-panel red lighten-2" hidden></div>
             <input class="btn my-3" type="submit" value="Shorten!">
         </form>
@@ -69,10 +83,12 @@
     }
 
     function hide_name(value) {
-      document.getElementById('name-input').hidden = value;
+      const name_div = document.getElementById('name-input');
+      if (name_div) name_div.hidden = value;
     }
 
     function validate(form, data) {
+      // Checks if https is used
       if (data.url.length < 4 || data.url.substr(0, 4) !== 'http') {
         data.url = 'https://' + data.url;
       } else if (data.url.length > 4 && data.url.substr(0, 5) === 'http:') {
@@ -81,15 +97,23 @@
         }
       }
 
-      const include_name = document.getElementById('include-name').checked;
-      if (!include_name) {
+      // Remember include-name may not actually exist
+      if (include_name()) {
+        const prefix = document.getElementById('prefix').value;
+        data.name = prefix + data.name;
+      } else {
+        // This means we just don't send it to the request
         delete data.name;
       }
 
       return data;
     }
 
-    hide_name(!document.getElementById('include-name').checked);
+    function include_name() {
+      return document.getElementById('include-name')?.checked;
+    }
+
+    hide_name(!include_name());
     init_form(document.querySelector('form'), form_callback, validate);
   </script>
 {{/layout}}
