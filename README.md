@@ -23,10 +23,18 @@ cargo run
 In the `Rocket.toml` file you need the following information
 
 ```sh
-hostname = "http://localhost:8000/"
-username = "<username>"
-password = "<password_hash>"
-
 [default.databases.diesel_postgres]
 url = "<postgresql_url>"
+```
+
+And then you need to specify the following environmental variables (recommended
+to put them in the `.cargo/config.toml` file)
+
+```sh
+APP_CLIENT_ID="<client_id>"
+APP_CLIENT_SECRET="<client_secret>"
+APP_CLIENT_URL="<oidc_server_url>"
+APP_HOSTNAME="<hostname>"
+
+APP_SECRET_KEY="<your_secret_key>"
 ```
