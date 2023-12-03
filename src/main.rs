@@ -2,7 +2,6 @@
 extern crate rocket;
 
 use api::API_LOCAL;
-use database::Url;
 use diesel::prelude::*;
 use diesel::ExpressionMethods;
 use rocket::fairing::AdHoc;
@@ -16,6 +15,7 @@ use rocket_dyn_templates::Template;
 
 mod admin;
 mod api;
+mod auth;
 mod config;
 mod database;
 mod schema;
@@ -25,12 +25,12 @@ mod utils;
 mod tests;
 
 use crate::config::AppConfig;
-use crate::database::{Db, Result};
+use crate::database::{Db, Result, Url};
 use crate::utils::random_colour;
 
 #[get("/")]
 pub fn index() -> Redirect {
-    Redirect::to(uri!("/admin"))
+    Redirect::to(uri!("/login"))
 }
 
 #[get("/<link>", rank = 100)]
@@ -70,9 +70,12 @@ fn not_found() -> Template {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
+    let figment = config::get_figment();
+
+    rocket::custom(figment)
         .attach(Template::fairing())
         .attach(AdHoc::config::<AppConfig>())
+        .attach(auth::stage())
         .attach(database::stage())
         .mount("/admin", admin::routes())
         .mount(API_LOCAL, api::routes())

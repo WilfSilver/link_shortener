@@ -1,4 +1,3 @@
-use password_auth::verify_password;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use rocket::http::CookieJar;
@@ -8,7 +7,7 @@ use rocket::State;
 use rocket_db_pools::diesel::prelude::*;
 use validator::{Validate, ValidationError};
 
-use crate::admin::User;
+use crate::auth::{User, USER_COOKIE};
 use crate::config::AppConfig;
 use crate::database::{self, Db, Result, Url};
 use crate::schema;
@@ -227,46 +226,12 @@ async fn add<'r>(
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-struct Login<'v> {
-    username: &'v str,
-    password: &'v str,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-struct LoginResponse {
-    success: bool,
-    error: Option<String>,
-}
-
-#[post("/login", data = "<login>")]
-fn login<'r>(
-    config: &State<AppConfig>,
-    jar: &CookieJar<'r>,
-    login: Json<Login<'r>>,
-) -> Json<LoginResponse> {
-    if config.username == login.username
-        && verify_password(login.password, &config.password).is_ok()
-    {
-        jar.add_private(("user_id", "1"));
-        Json(LoginResponse {
-            success: true,
-            error: None,
-        })
-    } else {
-        Json(LoginResponse {
-            success: false,
-            error: Some("Invalid login".to_string()),
-        })
-    }
-}
-
 #[post("/logout")]
 fn logout(jar: &CookieJar<'_>) -> Redirect {
-    jar.remove_private("user_id");
-    Redirect::to(uri!(crate::admin::login_page))
+    jar.remove_private(USER_COOKIE);
+    Redirect::to(uri!(crate::auth::login_page))
 }
 
 pub fn routes() -> Vec<rocket::Route> {
-    routes![add, login, logout]
+    routes![add, logout]
 }

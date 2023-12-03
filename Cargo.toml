@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.75"
 diesel = { version = "2.1.4", features = ["postgres"] }
 diesel-async = { version = "0.4.1", features = ["postgres"] }
 diesel_migrations = { version = "2.1.0", features = ["postgres"] }
