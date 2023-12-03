@@ -85,7 +85,7 @@ struct AddData {
 }
 
 fn validate_url_name(name: &str) -> Result<(), ValidationError> {
-    let forbidden_names = ["api", "admin", "js", "css"];
+    let forbidden_names = ["api", "admin", "js", "css", "login", "callback"];
 
     if forbidden_names.into_iter().any(|x| name.eq(x)) {
         return Err(ValidationError::new("Forbidden name"));
@@ -93,7 +93,7 @@ fn validate_url_name(name: &str) -> Result<(), ValidationError> {
 
     let valid_name = name
         .chars()
-        .all(|x| char::is_alphanumeric(x) || x == '/' || x == '-' || x == '_');
+        .all(|x| char::is_alphanumeric(x) || x == '-' || x == '_');
     if !valid_name {
         return Err(ValidationError::new("Invalid characters in name!"));
     }
