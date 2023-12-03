@@ -5,14 +5,13 @@ use rocket::response::Redirect;
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::State;
 use rocket_db_pools::diesel::prelude::*;
+use rocket_db_pools::Connection;
 use validator::{Validate, ValidationError};
 
 use crate::auth::{User, USER_COOKIE};
 use crate::config::AppConfig;
-use crate::database::{self, Db, Result, Url};
+use crate::database::{self, Db, PrefixLink, Result, Url};
 use crate::schema;
-
-use rocket_db_pools::Connection;
 
 pub static API_LOCAL: &str = "/api/v1";
 
@@ -107,6 +106,7 @@ enum AddResultError {
     FailedGen,
     NameExists,
     UrlExists(String),
+    UnauthorisedLink,
 }
 
 impl From<diesel::result::Error> for AddResultError {
@@ -156,7 +156,7 @@ async fn should_update(
 async fn add<'r>(
     config: &State<AppConfig>,
     mut db: Connection<Db>,
-    _user: User,
+    user: User,
     info: Json<AddData>,
 ) -> Json<AddPostResponse> {
     if let Err(e) = info.validate() {
@@ -173,10 +173,17 @@ async fn add<'r>(
         .transaction(|mut conn| {
             Box::pin(async move {
                 let (name, update) = match &info.name {
-                    Some(name) => (
-                        name.clone(),
-                        should_update(conn, name, &info.url, info.force.unwrap_or(false)).await?,
-                    ),
+                    Some(name) => {
+                        // Check if the user has permission to create a link with
+                        // this name
+                        if !PrefixLink::user_can_link(conn, &user.id, name).await {
+                            return Err(AddResultError::UnauthorisedLink);
+                        }
+
+                        let up = should_update(conn, name, &info.url, info.force.unwrap_or(false))
+                            .await?;
+                        (name.clone(), up)
+                    }
                     None => {
                         // If it already exists we just want to return that
                         if let Some(link) = Url::from_url(conn, &info.url).await {
@@ -211,6 +218,10 @@ async fn add<'r>(
     match res {
         Ok(name) => Json(AddPostResponse::ok(config.hostname.clone() + &name)),
         Err(e) => match e {
+            AddResultError::UnauthorisedLink => Json(AddPostResponse::error(
+                "You do not have permission to create this link",
+                None,
+            )),
             AddResultError::NameExists => Json(AddPostResponse::dialog(
                 "The name already exists. Would you like to override?",
                 None,

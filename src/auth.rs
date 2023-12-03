@@ -123,7 +123,6 @@ async fn callback<'r>(
             .await
             .map_err(|e| e.to_string())?
         {
-            println!("User: {}", json::to_string(&user).unwrap());
             jar.add_private(
                 Cookie::build((USER_COOKIE, json::to_string(&user).unwrap()))
                     .same_site(SameSite::Lax),

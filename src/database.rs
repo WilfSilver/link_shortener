@@ -40,6 +40,37 @@ impl Url {
     }
 }
 
+#[derive(Deserialize, Insertable, Queryable, Serialize, Selectable)]
+#[diesel(table_name = crate::schema::prefixes)]
+#[serde(crate = "rocket::serde")]
+pub struct PrefixLink {
+    pub user_id: String,
+    pub prefix: String,
+}
+
+impl PrefixLink {
+    pub async fn get_all(conn: &mut Connection<Db>, user_id: &str) -> Vec<PrefixLink> {
+        schema::prefixes::table
+            .filter(schema::prefixes::user_id.eq(user_id))
+            .get_results(conn)
+            .await
+            .unwrap_or_default()
+    }
+
+    pub async fn user_can_link(conn: &mut Connection<Db>, user_id: &str, link_name: &str) -> bool {
+        let prefixes = PrefixLink::get_all(conn, user_id).await;
+        for p in prefixes {
+            let length = p.prefix.len();
+
+            if length == 0 || (link_name.len() >= length && p.prefix == link_name[..length]) {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("PostgreSQL Stage", |rocket| async {
         rocket.attach(Db::init())

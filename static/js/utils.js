@@ -115,4 +115,6 @@ document.addEventListener('DOMContentLoaded', function() {
   M.Tooltip.init(document.querySelectorAll('.tooltipped'), {
     enterDelay: 10,
   });
+
+  M.FormSelect.init(document.querySelectorAll('select'), {});
 });
