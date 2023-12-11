@@ -83,7 +83,7 @@
 
     function hide_name(value) {
       const name_div = document.getElementById('name-input');
-      if (name_div) name_div.hidden = value;
+      if (name_div) name_div.style.display = value ? 'none' : '';
     }
 
     function validate(form, data) {
