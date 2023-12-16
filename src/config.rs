@@ -1,9 +1,12 @@
+//! Stores custom configuration information
+
 use figment::{
     providers::{Env, Format, Toml},
     Figment, Profile,
 };
 use serde::{Deserialize, Serialize};
 
+/// Custom config options used throughout the application
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
 pub struct AppConfig {

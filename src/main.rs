@@ -33,6 +33,8 @@ pub fn index() -> Redirect {
     Redirect::to(uri!("/login"))
 }
 
+/// Handles any link that is not found elsewhere and looks it up in the
+/// database to redirect
 #[get("/<link>", rank = 100)]
 async fn redirect(mut db: Connection<Db>, link: &str) -> Result<Redirect, Status> {
     let res: Result<Url, _> = schema::urls::table
@@ -68,6 +70,7 @@ fn not_found() -> Template {
     )
 }
 
+/// Main function run by rocket to launch the application
 #[launch]
 fn rocket() -> _ {
     let figment = config::get_figment();
@@ -75,10 +78,10 @@ fn rocket() -> _ {
     rocket::custom(figment)
         .attach(Template::fairing())
         .attach(AdHoc::config::<AppConfig>())
+        .attach(admin::stage("/admin".to_string()))
+        .attach(api::stage(API_LOCAL.to_string()))
         .attach(auth::stage())
         .attach(database::stage())
-        .mount("/admin", admin::routes())
-        .mount(API_LOCAL, api::routes())
         .mount("/", routes![index, redirect])
         .mount("/", FileServer::from(relative!("static")))
         .register("/", catchers![not_found, internal_error])

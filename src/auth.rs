@@ -1,3 +1,5 @@
+//! Handles authentication with an OIDC server for the admin interfaces
+
 use openidconnect::{
     core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata},
     reqwest::async_http_client,
@@ -21,14 +23,16 @@ use crate::config::AppConfig;
 pub const USER_COOKIE: &str = "user";
 pub const VALIDATOR_COOKIE: &str = "validator";
 
+/// Inspired by https://github.com/csssuf/rocket_oidc
+///
+/// Stores the information required to validate a connection to the
+/// authentication server.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OidcValidator {
     pub auth_url: String,
     pub csrf_token: CsrfToken,
     pub nonce: Nonce,
 }
-
-// Inspired by https://github.com/csssuf/rocket_oidc
 impl OidcValidator {
     pub fn new(client: &CoreClient) -> Self {
         let (auth_url, csrf_token, nonce) = client
@@ -46,6 +50,8 @@ impl OidcValidator {
         }
     }
 
+    /// Once the user returns from the authentication server, we need to
+    /// validate and extract the user's ID from it
     pub async fn verify(
         &self,
         client: &CoreClient,
@@ -70,11 +76,14 @@ impl OidcValidator {
     }
 }
 
+/// If put in the parameters to an endpoint function, the User has to be logged
+/// in. Stores the Users ID from the authentication server
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: String,
 }
 
+/// Allows the User to be automatically extracted from the cookies
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for User {
     type Error = std::convert::Infallible;
@@ -88,6 +97,10 @@ impl<'r> FromRequest<'r> for User {
     }
 }
 
+/// Returns a connection to the authentication server which can be used to
+/// redirect the user or authenticate them.
+///
+/// This should not be called for each request, instead having a global version
 pub async fn get_client(config: &AppConfig) -> Result<CoreClient, Box<dyn std::error::Error>> {
     let provider_metadata = CoreProviderMetadata::discover_async(
         IssuerUrl::new(config.client_url.clone())?,
@@ -105,6 +118,8 @@ pub async fn get_client(config: &AppConfig) -> Result<CoreClient, Box<dyn std::e
     Ok(client)
 }
 
+/// This is called by the authentication server (normally requiring it to be
+/// white-listed) once the user has logged in and allowed the server access
 #[get("/callback?<code>", rank = 2)]
 async fn callback<'r>(
     jar: &CookieJar<'r>,
@@ -134,16 +149,20 @@ async fn callback<'r>(
     Ok(Redirect::to(uri!("/")))
 }
 
+/// If the user is already logged in, we can just pass them to the admin
+/// interface
 #[get("/callback")]
 fn callback_no_auth(_user: User) -> Redirect {
     Redirect::to(uri!("/admin"))
 }
 
+/// If the user is already logged in, send them on their way
 #[get("/login")]
 fn login(_user: User) -> Redirect {
     Redirect::to(uri!("/admin"))
 }
 
+/// As we are using an OIDC server, we should redirect them there
 #[get("/login", rank = 2)]
 pub fn login_page(jar: &CookieJar, client: &State<CoreClient>) -> Redirect {
     let validator = OidcValidator::new(client);
@@ -154,6 +173,8 @@ pub fn login_page(jar: &CookieJar, client: &State<CoreClient>) -> Redirect {
     Redirect::to(validator.auth_url)
 }
 
+/// Creates the client from the configuration and adds it to the global
+/// variables
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("Authentication Server Stage", |rocket| async {
         let config: AppConfig = rocket

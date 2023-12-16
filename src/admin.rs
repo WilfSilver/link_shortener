@@ -1,4 +1,7 @@
+//! Handles any interfaces which requires the user to be logged in to access
+
 use diesel_async::AsyncConnection;
+use rocket::fairing::AdHoc;
 use rocket::response::Redirect;
 use rocket_db_pools::Connection;
 use rocket_dyn_templates::{context, Template};
@@ -8,9 +11,10 @@ use crate::auth::{self, User};
 use crate::database::{Db, PrefixLink};
 use crate::utils::random_colour;
 
+/// Once a user is logged in, show the admin panel with the prefixes which the
+/// user is allowed to use
 #[get("/")]
 pub async fn index(mut db: Connection<Db>, user: User) -> Template {
-    println!("User: {}", user.id);
     let prefixes: Vec<PrefixLink> = db
         .transaction(|conn| {
             Box::pin(async move {
@@ -19,8 +23,6 @@ pub async fn index(mut db: Connection<Db>, user: User) -> Template {
         })
         .await
         .unwrap_or_default();
-
-    println!("Prefixes: {}", prefixes.len());
 
     Template::render(
         "shortener",
@@ -34,11 +36,16 @@ pub async fn index(mut db: Connection<Db>, user: User) -> Template {
     )
 }
 
+/// Redirect to the login page if the user is not logged in (so without the
+/// cookie)
 #[get("/", rank = 2)]
 fn no_auth_index() -> Redirect {
     Redirect::to(uri!(auth::login_page))
 }
 
-pub fn routes() -> Vec<rocket::Route> {
-    routes![index, no_auth_index]
+/// Adds the endpoints for admin interface
+pub fn stage(route: String) -> AdHoc {
+    AdHoc::on_ignite("Admin Server Initialisation", |rocket| async {
+        rocket.mount(route, routes![index, no_auth_index])
+    })
 }

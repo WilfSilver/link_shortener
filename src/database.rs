@@ -1,3 +1,6 @@
+//! Stores the Database structures and functions which can be used for
+//! interacting with the database via diesel
+
 use rocket::fairing::AdHoc;
 use rocket::response::Debug;
 use rocket::serde::{Deserialize, Serialize};
@@ -21,6 +24,7 @@ pub struct Url {
 }
 
 impl Url {
+    /// Returns whether a URL already exists in the database
     pub async fn exists(conn: &mut Connection<Db>, name: &str) -> bool {
         let res: Result<Url, _> = schema::urls::table
             .filter(schema::urls::name.eq(name))
@@ -30,6 +34,7 @@ impl Url {
         res.is_ok()
     }
 
+    /// Gets the row from the URL
     pub async fn from_url(conn: &mut Connection<Db>, url: &str) -> Option<Url> {
         let res: Result<Url, _> = schema::urls::table
             .filter(schema::urls::url.eq(url))
@@ -49,6 +54,7 @@ pub struct PrefixLink {
 }
 
 impl PrefixLink {
+    /// Returns all the prefixes which a given user is allowed to use
     pub async fn get_all(conn: &mut Connection<Db>, user_id: &str) -> Vec<PrefixLink> {
         schema::prefixes::table
             .filter(schema::prefixes::user_id.eq(user_id))
@@ -57,6 +63,7 @@ impl PrefixLink {
             .unwrap_or_default()
     }
 
+    /// Returns if a user is allowed to use a link with a given name
     pub async fn user_can_link(conn: &mut Connection<Db>, user_id: &str, link_name: &str) -> bool {
         let prefixes = PrefixLink::get_all(conn, user_id).await;
         for p in prefixes {
@@ -71,6 +78,7 @@ impl PrefixLink {
     }
 }
 
+/// Initialises the database
 pub fn stage() -> AdHoc {
     AdHoc::on_ignite("PostgreSQL Stage", |rocket| async {
         rocket.attach(Db::init())

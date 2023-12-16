@@ -1,3 +1,5 @@
+//! Utility functions used throughout the application
+
 use rand::seq::SliceRandom;
 
 static COLOURS: [&str; 8] = [
@@ -11,6 +13,8 @@ static COLOURS: [&str; 8] = [
     "pink darken-1",
 ];
 
+/// Generates a random colour classes for the background (yes its bad but
+/// funny)
 pub fn random_colour() -> &'static str {
     COLOURS.choose(&mut rand::thread_rng()).unwrap()
 }

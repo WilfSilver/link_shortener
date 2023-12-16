@@ -1,5 +1,9 @@
+//! All endpoints and structures used and returned by the API (which requires
+//! authentication to access)
+
 use rand::distributions::Alphanumeric;
 use rand::Rng;
+use rocket::fairing::AdHoc;
 use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::{json::Json, Deserialize, Serialize};
@@ -15,6 +19,9 @@ use crate::schema;
 
 pub static API_LOCAL: &str = "/api/v1";
 
+/// This stores the name of the value which is invalid and the description of
+/// the error so we can pass it back to the frontend to give more interactive
+/// errors.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct FormErrorPair {
     name: String,
@@ -34,6 +41,7 @@ impl FormErrorPair {
     }
 }
 
+/// Type which is returned from the "/add" endpoint
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct AddPostResponse {
     success: bool,
@@ -44,6 +52,7 @@ struct AddPostResponse {
 }
 
 impl AddPostResponse {
+    /// Returns an okay error with the shortened URL
     fn ok(url: String) -> Self {
         AddPostResponse {
             success: true,
@@ -54,6 +63,8 @@ impl AddPostResponse {
         }
     }
 
+    /// Asks the frontend to prompt the user with a warning page, (meaning if
+    /// they run with force the request would succeed)
     fn dialog(message: &str, form_errors: Option<Vec<FormErrorPair>>) -> Self {
         AddPostResponse {
             success: false,
@@ -64,6 +75,7 @@ impl AddPostResponse {
         }
     }
 
+    /// Returns a error response
     fn error(message: &str, form_errors: Option<Vec<FormErrorPair>>) -> Self {
         AddPostResponse {
             success: false,
@@ -75,6 +87,7 @@ impl AddPostResponse {
     }
 }
 
+/// Data which needs to be given when requesting "/add"
 #[derive(Debug, Validate, Deserialize, Serialize)]
 struct AddData {
     #[validate(length(min = 1), custom = "validate_url_name")]
@@ -84,6 +97,8 @@ struct AddData {
     force: Option<bool>,
 }
 
+/// Validates a valid shorted URL name, making sure it doesn't have any
+/// invalid characters.
 fn validate_url_name(name: &str) -> Result<(), ValidationError> {
     let forbidden_names = ["api", "admin", "js", "css", "login", "callback"];
 
@@ -101,6 +116,7 @@ fn validate_url_name(name: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+/// Potential errors which can be returned by the add function
 enum AddResultError {
     Error(diesel::result::Error),
     FailedGen,
@@ -115,6 +131,7 @@ impl From<diesel::result::Error> for AddResultError {
     }
 }
 
+/// Generates a random 3 letter name for the shorted URL when one is not given
 async fn gen_random_name(conn: &mut Connection<Db>) -> Result<String, AddResultError> {
     // Try 5 times to generate a name before giving up
     for _ in 0..5 {
@@ -132,6 +149,9 @@ async fn gen_random_name(conn: &mut Connection<Db>) -> Result<String, AddResultE
     Err(AddResultError::FailedGen)
 }
 
+/// Returns whether a name should be updated or inserted, or if it exists
+/// without force being used, it will return an error which can be passed back
+/// to the user
 async fn should_update(
     conn: &mut Connection<Db>,
     name: &str,
@@ -152,6 +172,7 @@ async fn should_update(
     }
 }
 
+/// Endpoint for adding a shortened URL
 #[post("/add", data = "<info>")]
 async fn add<'r>(
     config: &State<AppConfig>,
@@ -237,12 +258,16 @@ async fn add<'r>(
     }
 }
 
+/// Logs the user out
 #[post("/logout")]
 fn logout(jar: &CookieJar<'_>) -> Redirect {
     jar.remove_private(USER_COOKIE);
     Redirect::to(uri!(crate::auth::login_page))
 }
 
-pub fn routes() -> Vec<rocket::Route> {
-    routes![add, logout]
+/// Initialises the API at a given route
+pub fn stage(route: String) -> AdHoc {
+    AdHoc::on_ignite("API Server Initialisation", |rocket| async {
+        rocket.mount(route, routes![add, logout])
+    })
 }
